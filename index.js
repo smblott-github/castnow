@@ -43,20 +43,28 @@ if (opts.help) {
 
     '--help                  This help screen',
     '',
+    'If standard input is a terminal, then the following Keys control playback.  Otherwise',
+    'the following Command names are read from standard input.',
+    '',
     'Player controls',
     '',
-    'Key                     Action',
-    'space                   Toggle between play and pause',
-    'm                       Toggle mute',
-    'up                      Volume Up',
-    'down                    Volume Down',
-    'left                    Seek backward',
-    'right                   Seek forward',
-    'n                       Next in playlist',
-    's                       Stop playback',
-    'quit                    Quit',
+    'Key      Command        Action',
+    'space    pause          Toggle between play and pause',
+    'm        mute           Toggle mute',
+    'up       louder         Volume Up',
+    'down     quiter         Volume Down',
+    'left     rewind         Seek backward',
+    'right    forward        Seek forward',
+    'n        next           Next in playlist',
+    's        stop           Stop playback',
+    'quit     quit           Quit',
     ''
   ].join('\n'));
+}
+
+// If stdout is not a terminal (or we're in debug mode), then force --quiet.
+if (!process.stdout.isTTY || process.env.DEBUG) {
+  opts.quiet = true;
 }
 
 if (opts._.length) {
@@ -69,7 +77,7 @@ if (opts._.length) {
 
 delete opts._;
 
-if (opts.quiet || process.env.DEBUG) {
+if (opts.quiet) {
   ui.hide();
 }
 
@@ -95,9 +103,11 @@ var ctrl = function(err, p, ctx) {
   var playlist = ctx.options.playlist;
   var volume;
 
-  keypress(process.stdin);
-  process.stdin.setRawMode(true);
-  process.stdin.resume();
+  if (process.stdin.isTTY) {
+    keypress(process.stdin);
+    process.stdin.setRawMode(true);
+    process.stdin.resume();
+  }
 
   ctx.once('closed', function() {
     ui.hide();
@@ -249,15 +259,43 @@ var ctrl = function(err, p, ctx) {
     }
   };
 
-  process.stdin.on('keypress', function(ch, key) {
-    if (key && key.name && keyMappings[key.name]) {
-      debug('key pressed: %s', key.name);
-      keyMappings[key.name]();
-    }
-    if (key && key.ctrl && key.name == 'c') {
-      process.exit();
-    }
-  });
+  if (process.stdin.isTTY) {
+    process.stdin.on('keypress', function(ch, key) {
+      if (key && key.name && keyMappings[key.name]) {
+        debug('key pressed: %s', key.name);
+        keyMappings[key.name]();
+      }
+      if (key && key.ctrl && key.name == 'c') {
+        process.exit();
+      }
+    });
+  } else {
+    // If stdin is not a TTY, then we read commands instead of keys.
+    var commandToKeyMapping = {
+       pause: "space",
+       mute: "m",
+       louder: "up",
+       quieter: "down",
+       next: "n",
+       stop: "s",
+       quit: "q",
+       rewind: "left",
+       forward: "right",
+    };
+
+    process.stdin.on('data', function(chunk) {
+      var commands = chunk.toString('utf8').trim().split(/\n/);
+      commands.forEach(function (command) {
+        if (command && commandToKeyMapping[command]) {
+          debug('command: %s', command);
+          keyMappings[commandToKeyMapping[command]]();
+        }
+      });
+    });
+    process.stdin.on('end', function() {
+      process.exit(0);
+    });
+  }
 };
 
 var capitalize = function(str) {
