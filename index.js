@@ -178,20 +178,24 @@ var ctrl = function(err, p, ctx) {
 
   var updateTitle = function() {
     p.getStatus(function(err, status) {
-      if (!status || !status.media ||
-          !status.media.metadata ||
-          !status.media.metadata.title) return;
-
-      var metadata = status.media.metadata;
-      var title;
-      if (metadata.artist) {
-        title = metadata.artist + ' - ' + metadata.title;
-      } else {
-        title = metadata.title;
+      if (!status || !status.media) return;
+      if (status.media.metadata && status.media.metadata.title) {
+        var metadata = status.media.metadata;
+        var title;
+        if (metadata.artist) {
+          title = metadata.artist + ' - ' + metadata.title;
+        } else {
+          title = metadata.title;
+        }
+        ui.setLabel('source', 'Source', title);
+        ui.showLabels('state', 'source');
+        ui.render();
+      } else if (status.media.contentId) {
+        var title = status.media.contentId.split('/').reverse()[0]
+        ui.setLabel('source', 'Source', decodeURI(title));
+        ui.showLabels('state', 'source');
+        ui.render();
       }
-      ui.setLabel('source', 'Source', title);
-      ui.showLabels('state', 'source');
-      ui.render();
     });
   };
 
