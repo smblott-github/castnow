@@ -131,7 +131,7 @@ var ctrl = function(err, p, ctx) {
     process.exit();
   }
 
-  player.emit("attached", {player: p, ctx: ctx}}
+  player.emit("attached", {player: p, ctx: ctx});
 
   var playlist = ctx.options.playlist;
   var volume;
