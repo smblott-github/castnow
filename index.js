@@ -131,6 +131,8 @@ var ctrl = function(err, p, ctx) {
     process.exit();
   }
 
+  player.emit("attached", {player: p, ctx: ctx}}
+
   var playlist = ctx.options.playlist;
   var volume;
   var is_keyboard_interactive = process.stdin.isTTY || false;
